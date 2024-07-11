@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Fraud Risk Scoring Calculator</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .calculator {
+            background-color: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        .risk-factor {
+            margin-bottom: 20px;
+        }
+        .risk-factor h2 {
+            margin-bottom: 10px;
+            color: #34495e;
+        }
+        .sub-component {
+            margin-bottom: 10px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        input[type="range"] {
+            width: 100%;
+        }
+        .info-button {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+        .info-text {
+            display: none;
+            background-color: #eef2f7;
+            padding: 10px;
+            border-radius: 4px;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+        .result {
+            background-color: #ecf0f1;
+            padding: 15px;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        .result h2 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="calculator">
+        <h1>Advanced Fraud Risk Scoring Calculator</h1>
+        <div id="riskFactors"></div>
+        <div class="result">
+            <h2>Overall Risk Assessment</h2>
+            <p>Risk Score: <span id="overallRiskScore">50.00</span></p>
+            <p>Risk Level: <span id="riskLevel">Medium</span></p>
+        </div>
+    </div>
+
+    <script>
+        const riskFactors = {
+            transactionDetails: {
+                name: "Transaction Details",
+                weight: 0.25,
+                subComponents: {
+                    amount: { name: "Transaction Amount", value: 50, weight: 0.6, description: "The monetary value of the transaction. Higher amounts increase risk." },
+                    frequency: { name: "Transaction Frequency", value: 50, weight: 0.2, description: "How often similar transactions occur for this customer." },
+                    binCountryMatch: { name: "BIN Country Match", value: 50, weight: 0.2, description: "Whether the card's BIN country matches the billing address country." }
+                }
+            },
+            geographicRisk: {
+                name: "Geographic Risk",
+                weight: 0.25,
+                subComponents: {
+                    ipProxyDetection: { name: "Proxy Detection", value: 50, weight: 0.2, description: "Detects if an anonymous or open proxy is being used." },
+                    billingIPCountryMatch: { name: "Billing/IP Country Match", value: 50, weight: 0.2, description: "Checks if the IP country matches the billing address country." },
+                    distance: { name: "IP-Billing Distance", value: 50, weight: 0.2, description: "Evaluates the distance between the IP address and billing address." },
+                    highRiskCountries: { name: "High-Risk Countries", value: 50, weight: 0.2, description: "Checks if the transaction involves high-risk countries." },
+                    regionCityMatch: { name: "Region/City Match", value: 50, weight: 0.2, description: "Verifies if the IP address region/city matches the billing address." }
+                }
+            },
+            customerVerification: {
+                name: "Customer Verification",
+                weight: 0.25,
+                subComponents: {
+                    phoneZipMatch: { name: "Phone-Zip Match", value: 50, weight: 0.3, description: "Checks if the phone number is in the same area as the billing ZIP code." },
+                    cityStateZipMatch: { name: "City/State-Zip Match", value: 50, weight: 0.3, description: "Verifies if the city and state match the provided ZIP code." },
+                    emailDomain: { name: "Email Domain Risk", value: 50, weight: 0.2, description: "Assesses risk based on the email domain (e.g., free email providers)." },
+                    carderEmail: { name: "Carder Email Check", value: 50, weight: 0.2, description: "Checks if the email has been associated with fraudulent transactions." }
+                }
+            },
+            customerHistory: {
+                name: "Customer History",
+                weight: 0.25,
+                subComponents: {
+                    accountAge: { name: "Account Age", value: 50, weight: 0.3, description: "The length of time the customer has had an account." },
+                    transactionPattern: { name: "Transaction Pattern", value: 50, weight: 0.4, description: "How well this transaction fits the customer's usual patterns." },
+                    chargebackHistory: { name: "Chargeback/Return History", value: 50, weight: 0.3, description: "The customer's history of chargebacks or returns." }
+                }
+            }
+        };
+
+        function createRiskFactor(key, factor) {
+            const factorDiv = document.createElement('div');
+            factorDiv.className = 'risk-factor';
+            factorDiv.innerHTML = `
+                <h2>${factor.name} <button class="info-button" onclick="toggleInfo('${key}')">Info</button></h2>
+                <div id="${key}Info" class="info-text"></div>
+            `;
+
+            for (const [subKey, subComp] of Object.entries(factor.subComponents)) {
+                const subCompDiv = document.createElement('div');
+                subCompDiv.className = 'sub-component';
+                subCompDiv.innerHTML = `
+                    <label>${subComp.name} (${(subComp.weight * 100).toFixed(1)}%)</label>
+                    <input type="range" min="0" max="100" value="${subComp.value}" 
+                           oninput="updateValue('${key}', '${subKey}', this.value)">
+                    <span>Score: <span id="${key}_${subKey}_value">${subComp.value}</span></span>
+                `;
+                factorDiv.appendChild(subCompDiv);
+            }
+
+            return factorDiv;
+        }
+
+        function toggleInfo(factorKey) {
+            const infoDiv = document.getElementById(`${factorKey}Info`);
+            if (infoDiv.style.display === 'none' || infoDiv.style.display === '') {
+                let infoContent = `<p>${riskFactors[factorKey].name}: ${riskFactors[factorKey].weight * 100}% of total score</p><ul>`;
+                for (const [subKey, subComp] of Object.entries(riskFactors[factorKey].subComponents)) {
+                    infoContent += `<li><strong>${subComp.name}:</strong> ${subComp.description}</li>`;
+                }
+                infoContent += '</ul>';
+                infoDiv.innerHTML = infoContent;
+                infoDiv.style.display = 'block';
+            } else {
+                infoDiv.style.display = 'none';
+            }
+        }
+
+        function updateValue(factorKey, subComponentKey, newValue) {
+            riskFactors[factorKey].subComponents[subComponentKey].value = Number(newValue);
+            document.getElementById(`${factorKey}_${subComponentKey}_value`).textContent = newValue;
+            updateRiskScore();
+        }
+
+        function updateRiskScore() {
+            let overallScore = 0;
+            for (const [factorKey, factor] of Object.entries(riskFactors)) {
+                let factorScore = 0;
+                for (const [subKey, subComp] of Object.entries(factor.subComponents)) {
+                    factorScore += subComp.value * subComp.weight;
+                }
+                overallScore += factorScore * factor.weight;
+            }
+
+            document.getElementById('overallRiskScore').textContent = overallScore.toFixed(2);
+            const riskLevelElement = document.getElementById('riskLevel');
+            if (overallScore < 30) {
+                riskLevelElement.textContent = 'Low';
+                riskLevelElement.style.color = 'green';
+            } else if (overallScore < 70) {
+                riskLevelElement.textContent = 'Medium';
+                riskLevelElement.style.color = 'orange';
+            } else {
+                riskLevelElement.textContent = 'High';
+                riskLevelElement.style.color = 'red';
+            }
+        }
+
+        // Initialize the calculator
+        document.addEventListener('DOMContentLoaded', () => {
+            const riskFactorsDiv = document.getElementById('riskFactors');
+            for (const [key, factor] of Object.entries(riskFactors)) {
+                riskFactorsDiv.appendChild(createRiskFactor(key, factor));
+            }
+            updateRiskScore();
+        });
+    </script>
+</body>
+</html>
