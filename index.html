@@ -57,6 +57,9 @@
             margin-top: 10px;
             font-size: 0.9em;
         }
+        .info-text.visible {
+            display: block;
+        }
         .result {
             background-color: #ecf0f1;
             padding: 15px;
@@ -148,16 +151,16 @@
 
         function toggleInfo(factorKey) {
             const infoDiv = document.getElementById(`${factorKey}Info`);
-            if (infoDiv.style.display === 'none' || infoDiv.style.display === '') {
+            if (!infoDiv.classList.contains('visible')) {
                 let infoContent = `<p>${riskFactors[factorKey].name}: ${riskFactors[factorKey].weight * 100}% of total score</p><ul>`;
                 for (const [subKey, subComp] of Object.entries(riskFactors[factorKey].subComponents)) {
                     infoContent += `<li><strong>${subComp.name}:</strong> ${subComp.description}</li>`;
                 }
                 infoContent += '</ul>';
                 infoDiv.innerHTML = infoContent;
-                infoDiv.style.display = 'block';
+                infoDiv.classList.add('visible');
             } else {
-                infoDiv.style.display = 'none';
+                infoDiv.classList.remove('visible');
             }
         }
 
